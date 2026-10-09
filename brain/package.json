@@ -1,0 +1,21 @@
+{
+  "name": "jev-launcher-brain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local search index + Jev (TypeSafe) decision engine for the Jev Launcher GNOME Shell extension",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "bun run src/index.js",
+    "dev": "bun --watch run src/index.js",
+    "test": "bun test",
+    "ask": "bun run src/tools/ask.js"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "dependencies": {
+    "@ai-sdk/gateway": "^4.0.87",
+    "ai": "^7.0.107"
+  }
+}

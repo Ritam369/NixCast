@@ -1,0 +1,13 @@
+# The compiled schema IS committed on purpose: it lets install.sh work on a
+# machine with no glib-compile-schemas on PATH.
+# schemas/gschemas.compiled
+
+node_modules/
+
+# `nixos-rebuild build` output if you run it from the repo
+result
+result-*
+
+# Local config or key material should never land in the repo
+config/config.local.json
+*.log

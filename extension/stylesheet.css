@@ -1,0 +1,119 @@
+/* Jev Launcher panel.
+ *
+ * GNOME Shell parses this with St's CSS engine. Anything unsupported is
+ * dropped with a warning in the journal, so keep to properties St knows.
+ * blur-my-shell, if installed, blurs shell chrome — this panel included.
+ */
+
+.jev-overlay {
+  background-color: rgba(0, 0, 0, 0.18);
+}
+
+.jev-panel {
+  background-color: rgba(28, 28, 32, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 10px;
+  width: 620px;
+  box-shadow: 0 18px 48px 0 rgba(0, 0, 0, 0.55);
+}
+
+.jev-entry-row {
+  padding: 6px 8px 8px 8px;
+}
+
+.jev-entry-icon {
+  icon-size: 20px;
+  color: #c8c8d0;
+  margin-right: 8px;
+}
+
+.jev-entry {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  font-size: 20px;
+  color: #ffffff;
+  caret-color: #7fd1a0;
+}
+
+.jev-entry-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.jev-rows {
+  padding: 2px 0 2px 0;
+}
+
+.jev-row {
+  border-radius: 10px;
+  padding: 7px 10px 7px 10px;
+}
+
+.jev-row-selected {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.jev-row-icon {
+  icon-size: 22px;
+  margin-right: 12px;
+  color: #e4e4ea;
+}
+
+.jev-row-title {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.jev-row-detail {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.jev-row-badge {
+  font-size: 11px;
+  color: #7fd1a0;
+  margin-right: 10px;
+}
+
+.jev-row-enter {
+  font-size: 14px;
+  color: #7fd1a0;
+  margin-left: 10px;
+}
+
+.jev-row-set-mark {
+  font-size: 12px;
+  color: #7fd1a0;
+  margin-left: 10px;
+}
+
+.jev-row-group .jev-row-title {
+  color: #a8d8ff;
+}
+
+.jev-footer {
+  padding: 6px 10px 2px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.jev-footer-notice {
+  font-size: 10px;
+  color: #7fd1a0;
+}
+
+.jev-footer-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.jev-footer-warn {
+  font-size: 10px;
+  color: #f0a35e;
+}
+
+.jev-in-flight {
+  font-size: 10px;
+  color: #7fd1a0;
+}

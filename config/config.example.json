@@ -1,0 +1,60 @@
+{
+  "jev": {
+    "enabled": true,
+    "transport": "gateway",
+    "apiKey": "PUT-YOUR-VERCEL-AI-GATEWAY-KEY-HERE",
+    "model": "typesafe-ai/jev",
+    "zeroDataRetention": false,
+    "gatewayBaseUrl": "",
+    "baseUrl": "https://api.typesafe.ai",
+    "path": "/v1/systemone",
+    "timeoutMs": 15000,
+    "debounceMs": 180,
+    "maxRetries": 2,
+    "warmup": true,
+    "extraHeaders": {}
+  },
+  "search": {
+    "maxCandidates": 13,
+    "maxCandidatesWithWindow": 30,
+    "maxRows": 7
+  },
+  "weights": {
+    "target": 0.65,
+    "action": 0.2,
+    "fuzzy": 0.15,
+    "setMember": 0.25
+  },
+  "thresholds": {
+    "ready": 0.6,
+    "readyDirectTarget": 0.9,
+    "matchMember": 0.6,
+    "offerAll": 0.5,
+    "tornAll": 0.15,
+    "readyAll": 0.75,
+    "minSetSize": 2,
+    "maxSetSize": 25
+  },
+  "index": {
+    "maxPerFolder": 400,
+    "nestedDepth": 1,
+    "historyDays": 90,
+    "historyRows": 3000,
+    "browsers": ["firefox", "brave", "chrome", "chromium", "edge", "vivaldi"],
+    "refreshMs": 120000
+  },
+  "actions": [
+    {
+      "id": "nixos-rebuild",
+      "title": "Rebuild NixOS",
+      "keywords": "nixos rebuild switch config",
+      "command": ["nixos-rebuild", "build"],
+      "terminal": true,
+      "description": "nixos-rebuild build (does not touch the running system)"
+    }
+  ],
+  "ui": {
+    "panelTopFraction": 0.15,
+    "showFooterStats": true
+  }
+}
