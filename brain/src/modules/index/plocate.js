@@ -22,7 +22,7 @@ const DEFAULTS = {
   timeoutMs: 400,
   maxResults: 10,
   minQueryLength: 3,
-  strongMatch: 0.6,
+  strongMatch: 0.85,
 };
 
 /**
@@ -33,7 +33,7 @@ const DEFAULTS = {
  * still finds its file, just below everything else.
  */
 const NOISY_PATH =
-  /\/(node_modules|\.pnpm-store|\.git|\.cache|\.vscode\/extensions|\.local\/share\/trash|\$recycle\.bin|\.trash-1000|system volume information|appdata\/(local|roaming)\/(temp|packages))\//i;
+  /\/(node_modules|\.pnpm-store|\.git|\.cache|\.bun\/install\/cache|\.npm|\.cargo\/(registry|git)|\.rustup|\.gradle|\.m2\/repository|__pycache__|\.venv|site-packages|\.next|\.nuxt|\.turbo|\.parcel-cache|nix\/store|\.vscode\/extensions|\.local\/share\/trash|\$recycle\.bin|\.trash-1000|system volume information|appdata\/(local|roaming)\/(temp|packages))\//i;
 
 export function isNoisyPath(filePath) {
   return NOISY_PATH.test(String(filePath ?? ''));

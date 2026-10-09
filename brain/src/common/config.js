@@ -6,53 +6,6 @@ import { createLogger } from './logger.js';
 const log = createLogger('config');
 
 export const DEFAULT_CONFIG = {
-  /**
-   * Jev credentials. Two transports:
-   *
-   *   transport: 'gateway'  Vercel AI Gateway via the AI SDK's
-   *                         experimental_evaluate — model `typesafe-ai/jev`,
-   *                         question type `boolean`, answer field
-   *                         `probability`. Use this with an AI Gateway key
-   *                         (AI_GATEWAY_API_KEY).
-   *   transport: 'direct'   TypeSafe's own HTTP API — model `jev-latest`,
-   *                         question type `noul`, answer field `noul`. Use
-   *                         this with a TypeSafe key.
-   *   transport: 'off'      never call out; fuzzy-only launcher.
-   *
-   * `apiKey` is read from this file and never from the Nix store, because
-   * everything in /nix/store is world readable. JEV_API_KEY,
-   * AI_GATEWAY_API_KEY and TYPESAFE_API_KEY in the environment win over it.
-   */
-  jev: {
-    enabled: true,
-    transport: 'gateway',
-    apiKey: '',
-    model: 'typesafe-ai/jev',
-    /**
-     * Ask the gateway for zero data retention. Off by default because the
-     * gateway refuses the whole request on plans that do not include it
-     * ("Zero Data Retention (ZDR) is only available for Pro and Enterprise
-     * plans"), which would look like a broken launcher. Turn it on if your plan
-     * supports it and you want that guarantee.
-     */
-    zeroDataRetention: false,
-    /** Empty means "use the AI SDK provider's own default base URL". */
-    gatewayBaseUrl: '',
-    baseUrl: 'https://api.typesafe.ai',
-    path: '/v1/systemone',
-    timeoutMs: 15000,
-    /**
-     * How long to wait after the last keystroke before asking Jev. The local
-     * fuzzy order renders instantly regardless, so this is pure perceived
-     * latency: 100 ms feels immediate while still collapsing a burst of typing
-     * into one request.
-     */
-    debounceMs: 100,
-    maxRetries: 2,
-    warmup: true,
-    extraHeaders: {},
-  },
-
   search: {
     maxCandidates: 13,
     maxCandidatesWithWindow: 30,
@@ -91,24 +44,6 @@ export const DEFAULT_CONFIG = {
     ],
   },
 
-  weights: {
-    target: 0.65,
-    action: 0.2,
-    fuzzy: 0.15,
-    setMember: 0.25,
-  },
-
-  thresholds: {
-    ready: 0.6,
-    readyDirectTarget: 0.9,
-    matchMember: 0.6,
-    offerAll: 0.5,
-    tornAll: 0.15,
-    readyAll: 0.75,
-    minSetSize: 2,
-    maxSetSize: 25,
-  },
-
   index: {
     downloadsDir: paths.downloads,
     extraDirs: [paths.desktop, paths.documents],
@@ -133,6 +68,22 @@ export const DEFAULT_CONFIG = {
      * Index a tree instead (extraDirs) when searches in it are frequent, and
      * list it here when it is large, removable, or occasional.
      */
+    /**
+     * Whole-disk name search through plocate's prebuilt database. Consulted only
+     * when the index has no confident match, so it costs nothing while typing.
+     * Install it with `services.locate.enable = true` (see docs/nixos.md).
+     */
+    plocate: {
+      enabled: true,
+      /** plocate's own lookup is ~10 ms; this only bounds a cold database. */
+      timeoutMs: 400,
+      maxResults: 10,
+      minQueryLength: 3,
+      strongMatch: 0.85,
+      /** Build artefacts, caches and recycle bins are ranked down, not hidden. */
+      noisyPenalty: 0.35,
+    },
+
     searchRoots: [],
     liveWalk: {
       enabled: true,
@@ -143,8 +94,12 @@ export const DEFAULT_CONFIG = {
       /** Shorter queries are too broad to be worth a walk. */
       minQueryLength: 3,
       maxEntries: 20_000,
-      /** Skip the walk when the index already produced this many confident matches. */
-      strongMatch: 0.6,
+      /**
+       * Stand down when the index already has a match this confident (0.85 is
+       * the word-prefix tier). A lower bar let mediocre matches suppress the
+       * walk, hiding files the walk would have found by name.
+       */
+      strongMatch: 0.85,
     },
   },
 
@@ -175,8 +130,11 @@ export const DEFAULT_CONFIG = {
   ],
 
   ui: {
-    panelTopFraction: 0.15,
-    showFooterStats: true,
+    /**
+     * Terminal used for actions marked `"terminal": true`. Empty means: the
+     * first of kitty, alacritty, foot, gnome-terminal, xterm that is installed.
+     */
+    terminal: '',
   },
 };
 
@@ -213,25 +171,8 @@ export function loadConfig({ reload = false } = {}) {
   cached = mergeDeep(DEFAULT_CONFIG, fileConfig);
 
   // Environment overrides — useful for testing without touching the config file.
-  const env = process.env;
-  if (env.JEV_TRANSPORT) cached.jev.transport = env.JEV_TRANSPORT;
-  if (env.JEV_BASE_URL) cached.jev.baseUrl = env.JEV_BASE_URL;
-  if (env.JEV_GATEWAY_BASE_URL) cached.jev.gatewayBaseUrl = env.JEV_GATEWAY_BASE_URL;
-  if (env.JEV_MODEL) cached.jev.model = env.JEV_MODEL;
-  if (env.JEV_DISABLE === '1') cached.jev.enabled = false;
-
-  // The key: AI_GATEWAY_API_KEY for the gateway transport, TYPESAFE_API_KEY for
-  // the direct one. Either is accepted as a fallback so switching transports
-  // never means moving the secret.
-  const preferred = cached.jev.transport === 'gateway'
-    ? env.AI_GATEWAY_API_KEY ?? env.TYPESAFE_API_KEY
-    : env.TYPESAFE_API_KEY ?? env.AI_GATEWAY_API_KEY;
-  if (env.JEV_API_KEY ?? preferred) cached.jev.apiKey = env.JEV_API_KEY ?? preferred;
-
-  // A gateway model id is meaningless to the direct API and vice versa, so
-  // follow the transport when the model was left at its default.
-  if (cached.jev.transport === 'direct' && cached.jev.model === DEFAULT_CONFIG.jev.model) cached.jev.model = 'jev-latest';
-  if (cached.jev.transport === 'gateway' && cached.jev.model === 'jev-latest') cached.jev.model = DEFAULT_CONFIG.jev.model;
+  if (process.env.NIXCAST_SOCKET) cached.socket = process.env.NIXCAST_SOCKET;
+  if (process.env.NIXCAST_DISABLE_WALK === '1') cached.index.liveWalk.enabled = false;
 
   return cached;
 }
@@ -249,15 +190,7 @@ export function saveConfig(config) {
 
 export function ensureConfigFile() {
   if (fs.existsSync(paths.configFile)) return { created: false, file: paths.configFile };
-  const template = mergeDeep(DEFAULT_CONFIG, {
-    jev: { apiKey: 'PUT-YOUR-VERCEL-AI-GATEWAY-KEY-HERE' },
-  });
-  saveConfig(template);
+  saveConfig(DEFAULT_CONFIG);
   return { created: true, file: paths.configFile };
 }
 
-export function jevIsConfigured(config = loadConfig()) {
-  const key = config.jev.apiKey ?? '';
-  if (!config.jev.enabled || config.jev.transport === 'off') return false;
-  return key.length > 0 && !key.startsWith('PUT-YOUR');
-}

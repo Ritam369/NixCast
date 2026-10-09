@@ -1,10 +1,9 @@
 {
-  "uuid": "jev-launcher@ritam.local",
-  "name": "Jev Launcher",
-  "description": "Spotlight-style launcher whose ranking and Enter-readiness are decided by Jev (TypeSafe System One). Types are answered locally; judgements come from one API call per keystroke.",
+  "uuid": "nixcast@ritam.local",
+  "name": "NixCast",
+  "description": "A Spotlight-style launcher for GNOME Shell, backed by a local index: apps, files, browser history and bookmarks, whole-disk name search, a calculator, system toggles and your own commands. Local by design — no account, no cloud.",
   "version": 1,
   "shell-version": ["45", "46", "47", "48", "49", "50"],
-  "settings-schema": "org.gnome.shell.extensions.jev-launcher",
-  "gettext-domain": "jev-launcher",
-  "url": "https://docs.typesafe.ai"
+  "settings-schema": "org.gnome.shell.extensions.nixcast",
+  "gettext-domain": "nixcast"
 }

@@ -12,7 +12,7 @@ let root;
 let deepRoot;
 
 beforeAll(() => {
-  root = fs.mkdtempSync(path.join(os.tmpdir(), 'jev-walk-'));
+  root = fs.mkdtempSync(path.join(os.tmpdir(), 'nixcast-walk-'));
   fs.mkdirSync(path.join(root, 'Camera Roll'), { recursive: true });
   fs.mkdirSync(path.join(root, 'screenshots'), { recursive: true });
   fs.writeFileSync(path.join(root, 'Apu.jpg'), 'x');
@@ -119,7 +119,7 @@ describe('live walk', () => {
   });
 
   test('multiple roots are all searched', () => {
-    const second = fs.mkdtempSync(path.join(os.tmpdir(), 'jev-walk2-'));
+    const second = fs.mkdtempSync(path.join(os.tmpdir(), 'nixcast-walk2-'));
     fs.writeFileSync(path.join(second, 'second-Apu.jpg'), 'x');
     const names = walkForQuery({ roots: [root, second], query: 'apu' }).rows.map((r) => r.title);
     expect(names).toContain('second-Apu.jpg');

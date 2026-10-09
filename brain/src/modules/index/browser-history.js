@@ -6,7 +6,7 @@
  * both hold their database open and locked while the browser runs, so we copy
  * the file (plus its -wal/-shm companions) to a temporary location and read
  * the copy. The browser database never leaves the machine; only the handful of
- * surviving candidates are ever sent to Jev.
+ * surviving candidates become rows in the index.
  */
 
 import fs from 'node:fs';
@@ -23,7 +23,7 @@ const log = createLogger('index.history');
 const WINDOWS_EPOCH_OFFSET_MS = 11_644_473_600_000;
 
 function copyDatabase(file) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jev-history-'));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nixcast-history-'));
   const copy = path.join(tmpDir, path.basename(file));
   fs.copyFileSync(file, copy);
   for (const suffix of ['-wal', '-shm']) {

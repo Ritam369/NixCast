@@ -1,4 +1,4 @@
-# Jev Launcher for NixOS — optional declarative bits.
+# NixCast for NixOS — optional declarative bits.
 #
 # The extension itself is installed into your home directory by install.sh
 # (a symlink the shell reads), so NixOS does not have to build anything. This
@@ -11,23 +11,26 @@
 #
 # Import it from configuration.nix:
 #
-#     imports = [ ./jev-launcher-nixos/nix/jev-launcher.nix ];
-#     services.jev-launcher = {
+#     imports = [ ./nixcast/nix/nixcast.nix ];
+#     services.nixcast = {
 #       enable = true;
 #       user = "ritam";
-#       repoDir = "/home/ritam/jev-launcher-nixos";
+#       repoDir = "/home/ritam/nixcast";
 #     };
 #
 # then, as always: sudo nixos-rebuild switch
+#
+# Whole-disk name search (plocate) and mounting external drives are documented
+# in docs/nixos.md — they are system services, not part of this module.
 
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.services.jev-launcher;
+  cfg = config.services.nixcast;
 in
 {
-  options.services.jev-launcher = {
-    enable = lib.mkEnableOption "the Jev Launcher brain (Bun) and its GNOME integration";
+  options.services.nixcast = {
+    enable = lib.mkEnableOption "the NixCast brain (Bun) and its GNOME integration";
 
     user = lib.mkOption {
       type = lib.types.str;
@@ -37,7 +40,7 @@ in
     repoDir = lib.mkOption {
       type = lib.types.str;
       description = "Absolute path to this repository's checkout.";
-      example = "/home/ritam/jev-launcher-nixos";
+      example = "/home/ritam/nixcast";
     };
 
     bunPackage = lib.mkOption {
@@ -62,8 +65,7 @@ in
     # Runtime dependencies of the executor and the indexers. sqlite3 is *not*
     # needed: Bun ships its own SQLite binding for reading browser histories.
     # glib.dev is here because glib-compile-schemas lives in glib's dev
-    # output on nixpkgs; install.sh uses it to recompile the extension's
-    # schema and falls back to the committed gschemas.compiled without it.
+    # output on nixpkgs; install.sh uses it to compile the extension's schema.
     environment.systemPackages = with pkgs; [
       cfg.bunPackage
       wl-clipboard      # calculator results and other copies
@@ -86,8 +88,8 @@ in
 
     # A user service, so the brain starts with the graphical session and is
     # restarted if it ever exits.
-    systemd.services.jev-brain = {
-      description = "Jev Launcher brain (local index + Jev decisions)";
+    systemd.services.nixcast-brain = {
+      description = "NixCast brain (local index)";
       wantedBy = [ "graphical-session.target" ];
       partOf = [ "graphical-session.target" ];
       after = [ "graphical-session.target" ];
@@ -98,7 +100,7 @@ in
         ExecStart = "${cfg.bunPackage}/bin/bun run ${cfg.repoDir}/brain/src/index.js";
         Restart = "on-failure";
         RestartSec = 2;
-        Environment = "JEV_LOG_LEVEL=info";
+        Environment = "NIXCAST_LOG_LEVEL=info";
       };
     };
   };

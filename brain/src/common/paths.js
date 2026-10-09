@@ -20,16 +20,16 @@ export const paths = {
   runtimeDir: env('XDG_RUNTIME_DIR', `/run/user/${process.getuid?.() ?? 1000}`),
 
   get appConfigDir() {
-    return path.join(this.configDir, 'jev-launcher');
+    return path.join(this.configDir, 'nixcast');
   },
   get configFile() {
     return path.join(this.appConfigDir, 'config.json');
   },
   get socketPath() {
-    return process.env.JEV_SOCKET ?? path.join(this.runtimeDir, 'jev-launcher', 'brain.sock');
+    return process.env.NIXCAST_SOCKET ?? path.join(this.runtimeDir, 'nixcast', 'brain.sock');
   },
   get logFile() {
-    return path.join(this.stateDir, 'jev-launcher', 'brain.log');
+    return path.join(this.stateDir, 'nixcast', 'brain.log');
   },
 
   // Application indices

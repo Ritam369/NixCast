@@ -4,8 +4,8 @@
  * A running browser holds its history and bookmark databases locked, so both
  * providers read from a temporary copy — including any -wal/-shm companions,
  * which hold the most recent transactions. The database never leaves the
- * machine, and only the handful of rows that survive filtering are ever sent to
- * Jev.
+ * machine, and only the handful of rows that survive filtering become rows in
+ * the index.
  */
 
 import fs from 'node:fs';
@@ -21,7 +21,7 @@ export const WINDOWS_EPOCH_OFFSET_MS = 11_644_473_600_000;
  * afterwards whether or not `fn` throws.
  */
 export function withDatabase(file, fn) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jev-sqlite-'));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nixcast-sqlite-'));
   const copy = path.join(tmpDir, path.basename(file));
   let db;
 

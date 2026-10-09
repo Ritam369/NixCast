@@ -1,5 +1,6 @@
 /**
- * Set detection — what Jev's `scope` and `match_cN` questions used to do.
+ * Set detection — deciding from the index which rows belong to one group,
+ * so a single Enter can act on all of them.
  *
  * A set ("Open all 5 items") is a fact about the index in almost every case that
  * matters: a named bookmark folder, an explicit "all of these", or a time

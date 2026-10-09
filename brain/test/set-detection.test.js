@@ -11,7 +11,7 @@ const page = (fuzzy, title) => ({
   fuzzy,
 });
 
-describe('set detection without Jev', () => {
+describe('set detection', () => {
   test('a named folder becomes a set', () => {
     const scored = ['TimeArena', 'Masterji', 'Courses', 'Chai Visual', 'React'].map((t) => bookmark(0.8, t, 'ChaiCode'));
     const set = detectSet({ query: 'open my ChaiCode bookmarks', timeWindow: null, scored });

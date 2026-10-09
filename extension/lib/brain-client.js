@@ -31,7 +31,7 @@ export class BrainClient {
 
   get socketPath() {
     if (this._socketPath) return this._socketPath;
-    return GLib.build_filenamev([GLib.get_user_runtime_dir(), 'jev-launcher', 'brain.sock']);
+    return GLib.build_filenamev([GLib.get_user_runtime_dir(), 'nixcast', 'brain.sock']);
   }
 
   #setState(state, detail = null) {
@@ -151,18 +151,15 @@ export class BrainClient {
     }
   }
 
-  query(text, context, seq, debounceMs = null) {
-    return this.send({ type: 'query', seq, text, context, debounceMs });
+  query(text, context, seq) {
+    return this.send({ type: 'query', seq, text, context });
   }
 
   execute(rowId, query) {
     return this.send({ type: 'execute', rowId, query });
   }
 
-  reindex() {
-    return this.send({ type: 'reindex' });
-  }
-
+  /** Ask for a fresh index summary; the reply arrives as a `stats` message. */
   requestStats() {
     return this.send({ type: 'stats' });
   }

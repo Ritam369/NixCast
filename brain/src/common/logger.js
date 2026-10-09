@@ -1,6 +1,6 @@
 const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 
-const configured = (process.env.JEV_LOG_LEVEL ?? 'info').toLowerCase();
+const configured = (process.env.NIXCAST_LOG_LEVEL ?? 'info').toLowerCase();
 const threshold = LEVELS[configured] ?? LEVELS.info;
 
 function emit(level, scope, message, extra) {

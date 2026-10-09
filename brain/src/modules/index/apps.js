@@ -191,10 +191,10 @@ export function loadApps(config) {
         id: `app:${name}`,
         kind: 'open_app',
         title,
-        // The subtitle is read by the user *and* by Jev — the model only ever
-        // sees title + detail. Falling back to a bare "Application" left it
-        // unable to tell a terminal emulator from a container launcher, which is
-        // how typing "terminal" ended up selecting a distrobox entry.
+        // The subtitle is what the user reads and the only thing a row says
+        // beyond its title. Falling back to a bare "Application" left no way to
+        // tell a terminal emulator from a container launcher, which is how
+        // typing "terminal" ended up selecting a distrobox entry.
         detail: [generic || category || 'Application', binary].filter(Boolean).join(' · '),
         keywords: [
           localized(entry, 'Keywords').split(';').join(' '),

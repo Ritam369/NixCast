@@ -1,29 +1,23 @@
 /**
- * Search engine — assembles one keystroke into a local view and, when Jev is
- * configured, a Jev-ranked view.
+ * Search engine — turns one keystroke into the rows the panel draws.
  *
- * The macOS launcher's shape is preserved exactly:
- *   1. parse a time window out of the phrase, in code
- *   2. fuzzy-prefilter the index, in code
- *   3. ask Jev every judgement in ONE request
- *   4. combine Jev's probabilities with the fuzzy score, in code
- *   5. only Enter executes anything
+ * Everything here is local and synchronous on purpose: this file makes no
+ * network call at any point. The pipeline is
  *
- * The one deliberate difference: fuzzy rows are returned to the UI before Jev
- * answers, so typing never waits on the network. From India a warm round trip
- * is ~0.3 s, not the ~0.1 s the original was tuned for, so the local phase is
- * what keeps the launcher feeling instant.
+ *   1. parse a time window out of the phrase
+ *   2. fuzzy-prefilter the index
+ *   3. if that came up weak, look wider — a live walk of the configured roots,
+ *      then plocate's whole-disk database
+ *   4. decide confidence and set membership deterministically
+ *   5. hand the rows to the UI; only Enter executes anything
  */
 
 import { evaluate, looksLikeMath } from './calculator.js';
 import { parseTimeWindow } from './time-window.js';
 import { isConfidentMatch, scoreRow, sortByFuzzy } from './fuzzy.js';
-import { orderForDisplay, rankRows } from './ranker.js';
 import { walkForQuery } from '../index/live-walk.js';
 import { searchByName } from '../index/plocate.js';
 import { detectSet, groupRow } from './set-detection.js';
-import { buildEventsState, buildQuestions } from '../jev/questions.js';
-import { candidateId } from '../../common/utils.js';
 import { createLogger } from '../../common/logger.js';
 
 const log = createLogger('engine');
@@ -91,8 +85,11 @@ export class SearchEngine {
     if (plocate.enabled === false) return [];
     if (query.trim().length < (plocate.minQueryLength ?? 3)) return [];
 
-    const strong = plocate.strongMatch ?? 0.6;
-    if (scored.filter(({ fuzzy }) => fuzzy >= strong).length >= 2) return [];
+    // Stand down only when the index already has a *confident* match. A merely
+    // decent one (0.65, say) used to suppress this lookup — which is how a
+    // mediocre history row hid a folder that matches by name exactly.
+    const strong = plocate.strongMatch ?? 0.85;
+    if (scored.some(({ fuzzy }) => fuzzy >= strong)) return [];
 
     const known = new Set(scored.map(({ row }) => row.path).filter(Boolean));
     const { rows, stats } = searchByName({ query, config: plocate });
@@ -112,8 +109,8 @@ export class SearchEngine {
     if (searchRoots.length === 0 || liveWalk.enabled === false) return [];
     if (query.trim().length < (liveWalk.minQueryLength ?? 3)) return [];
 
-    const strong = liveWalk.strongMatch ?? 0.6;
-    if (scored.filter(({ fuzzy }) => fuzzy >= strong).length >= 2) return [];
+    const strong = liveWalk.strongMatch ?? 0.85;
+    if (scored.some(({ fuzzy }) => fuzzy >= strong)) return [];
 
     const known = new Set(scored.map(({ row }) => row.path).filter(Boolean));
     const { rows, stats } = walkForQuery({ roots: searchRoots, query, config: liveWalk });
@@ -128,10 +125,9 @@ export class SearchEngine {
   }
 
   /**
-   * Small, honest nudges on top of the fuzzy score. Jev decides the final
-   * order; this only keeps the frame or two before its answer arrives from
-   * looking arbitrary — a file whose extension the user named should not sit
-   * below a web page that merely shares a few letters.
+   * Small, honest nudges on top of the fuzzy score: a file whose extension
+   * the user named should not sit below a web page that merely shares a few
+   * letters, and a build artefact should not outrank a real document.
    */
   #localBonus(row, searchText) {
     const tokens = String(searchText).toLowerCase().split(/\s+/).filter(Boolean);
@@ -156,8 +152,7 @@ export class SearchEngine {
   }
 
   /**
-   * Phase one — everything that needs no network.
-   * @returns {{view: object, payload: object, meta: object}}
+   * @returns {{view: object, meta: object}}
    */
   local(text, context = {}) {
     const query = String(text ?? '');
@@ -169,7 +164,7 @@ export class SearchEngine {
 
     let poolRows;
     // Held outside the branch so set detection can see the whole scored pool,
-    // rather than only the slice that becomes Jev candidates.
+    // not only the slice that becomes the visible candidate list.
     let scoredPool = [];
     if (query.trim().length === 0) {
       poolRows = this.#defaultRows(context);
@@ -201,8 +196,8 @@ export class SearchEngine {
         .map(({ row, fuzzy }) => ({ ...row, fuzzy }));
     }
 
-    // Local display order is pure fuzzy, with the calculator on top when the
-    // text is arithmetic — the same order the UI shows before Jev answers.
+    // Display order is pure fuzzy, with the calculator on top when the text is
+    // arithmetic.
     const localRows = [...poolRows];
     if (mathResult) {
       localRows.unshift({
@@ -238,17 +233,13 @@ export class SearchEngine {
       syntheticRows.push(searchRow);
     }
 
-    // Real candidates get the short ids the model reasons over; synthetic rows
-    // continue the same series so every id in `target` is unambiguous.
-    const realRows = poolRows.map((row, i) => ({ ...row, candidateId: candidateId(i) }));
-    const synthetics = syntheticRows.map((row, i) => ({ ...row, candidateId: candidateId(realRows.length + i) }));
+    // Synthetic rows — the calculator result and the web-search fallback — are
+    // ordinary rows of the list, just not part of the index.
+    const realRows = poolRows;
+    const synthetics = syntheticRows;
 
-    const state = buildEventsState({ query, context, timeWindow, rows: realRows, synthetic: synthetics });
-    // The query decides whether membership questions are worth their tokens.
-    const { questions } = buildQuestions({ rows: realRows, synthetic: synthetics, query });
-
-    // What Jev's scope and match questions used to answer, answered from the
-    // index instead: a named folder, an explicit "all", or a time window.
+    // What a set means, decided from the index rather than asked of a model:
+    // a named folder, an explicit "all", or a time window.
     const setInfo = detectSet({ query: searchText, timeWindow, scored: scoredPool });
     const setRow = setInfo.active && setInfo.members.length >= 2 ? groupRow(setInfo) : null;
     const isMember = (row) => Boolean(setInfo.active) && setInfo.members.some((member) => member.id === row.id);
@@ -279,54 +270,7 @@ export class SearchEngine {
         set: setInfo.active ? { active: true, size: setInfo.members.length, rule: setInfo.rule } : { active: false },
         phase: 'local',
       },
-      payload: { state, questions },
       meta: { query, timeWindow, mathResult, candidateCount: realRows.length, hasSynthetic: synthetics.length > 0 },
-    };
-  }
-
-  /**
-   * Phase two — fold Jev's answer into the row order.
-   * @returns {{view: object, stats: object, error: string|null}}
-   */
-  ranked(local, jevResult) {
-    const { view } = local;
-    if (!jevResult) return { view: { ...view, phase: 'local' }, stats: null, error: null };
-
-    const ranked = rankRows({
-      rows: view.rows.filter((r) => !r.synthetic),
-      synthetic: view.rows.filter((r) => r.synthetic),
-      answers: jevResult.answers,
-      weights: this.#config.weights,
-      thresholds: this.#config.thresholds,
-    });
-
-    const ordered = orderForDisplay({ ranked, maxRows: this.#config.search.maxRows ?? 7 });
-
-    // Keep the action the model chose on the row it chose it for: the UI shows
-    // the action kind, and the executor needs the row's own kind to act.
-    const withReadiness = ordered.map((row, index) => ({
-      ...row,
-      ready: index === 0 ? ranked.ready : false,
-      // A group row offers Enter only when the model is confident about the set.
-      ...(row.isGroup ? { ready: ranked.set.ready } : {}),
-    }));
-
-    return {
-      view: {
-        rows: withReadiness,
-        ready: withReadiness[0]?.ready ?? false,
-        targetId: ranked.targetId,
-        action: ranked.action,
-        set: ranked.set,
-        phase: 'jev',
-      },
-      stats: {
-        model: jevResult.model,
-        rttMs: jevResult.rttMs,
-        inputTokens: jevResult.usage?.input_tokens ?? 0,
-        costUsd: jevResult.costUsd,
-      },
-      error: null,
     };
   }
 }

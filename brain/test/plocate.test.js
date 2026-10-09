@@ -8,7 +8,7 @@ let root;
 let file;
 
 beforeAll(() => {
-  root = fs.mkdtempSync(path.join(os.tmpdir(), 'jev-plocate-'));
+  root = fs.mkdtempSync(path.join(os.tmpdir(), 'nixcast-plocate-'));
   fs.mkdirSync(path.join(root, 'Album'), { recursive: true });
   file = path.join(root, 'Album', 'Holiday-Photo.jpg');
   fs.writeFileSync(file, 'x');
@@ -51,6 +51,11 @@ describe('build artefacts are marked, not hidden', () => {
     expect(isNoisyPath('/home/ritam/project/.git/objects/pack/thing')).toBe(true);
     expect(isNoisyPath('/home/ritam/.vscode/extensions/openai.chatgpt/assets/holiday-widget.js')).toBe(true);
     expect(isNoisyPath('/mnt/onedrive/Users/Admin/AppData/Local/Temp/holiday.png')).toBe(true);
+    // Package-manager caches: a search for "dark" used to surface seven theme
+    // JSONs from the bun cache above the actual Toggle Dark Mode row.
+    expect(isNoisyPath('/home/ritam/.bun/install/cache/@oh-my-pi/pi-coding-agent@18/src/modes/theme/dark.json')).toBe(true);
+    expect(isNoisyPath('/home/ritam/.cache/pip/wheels/holiday.whl')).toBe(true);
+    expect(isNoisyPath('/nix/store/abc123-firefox-131/share/dark.css')).toBe(true);
     // The D: drive spells it uppercase, and carries a pnpm store and a Windows
     // system folder — all of which turned up in a real search.
     expect(isNoisyPath('/home/ritam/mount-d/$RECYCLE.BIN/S-1-5-21/thing')).toBe(true);

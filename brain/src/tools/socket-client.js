@@ -36,7 +36,7 @@ socket.setTimeout(8000, () => {
 
 socket.on('error', (err) => {
   console.error(`could not connect to ${socketPath}: ${err.message}`);
-  console.error('is the brain running?  systemctl --user status jev-brain');
+  console.error('is the brain running?  systemctl --user status nixcast-brain');
   process.exit(1);
 });
 
@@ -68,10 +68,10 @@ socket.on('data', (chunk) => {
 
     switch (message.type) {
       case 'hello':
-        console.log(`connected to brain on ${socketPath}`);
+        console.log(`connected to the NixCast brain on ${socketPath}`);
+        console.log(`app     : ${JSON.stringify(message.app)}`);
         console.log(`index   : ${JSON.stringify(message.index.counting)}`);
         console.log(`ready   : ${message.index.ready}   built: ${new Date(message.index.builtAt).toISOString()}`);
-        console.log(`jev     : ${JSON.stringify(message.jev)}`);
         if (text || executeRowId) break;
         socket.end();
         break;
@@ -86,22 +86,13 @@ socket.on('data', (chunk) => {
           );
         }
         if (message.set?.active) console.log(`  set: ${JSON.stringify(message.set)}`);
-        // Without a usable key there will never be a second phase, so do not
-        // sit here until the socket timeout.
-        const key = config.jev.apiKey ?? '';
-        const jevWillAnswer = config.jev.enabled && key.length > 0 && !key.startsWith('PUT-YOUR');
-        if (message.phase === 'jev' || !jevWillAnswer) {
-          setTimeout(() => socket.end(), 50);
-        }
+        // One phase now: the local answer. When an execution was requested, keep
+        // the socket open so its reply can be printed too.
+        if (!executeRowId) setTimeout(() => socket.end(), 50);
         break;
 
       case 'executed':
         console.log(`\nexecuted: ok=${message.ok} ${message.message}`);
-        socket.end();
-        break;
-
-      case 'jev_error':
-        console.log(`\njev error: ${message.error}`);
         socket.end();
         break;
 
@@ -126,7 +117,7 @@ socket.on('connect', () => {
     setTimeout(() => send({ id: 3, type: 'execute', rowId: executeRowId, query: text }), 1200);
   } else if (text) {
     seq += 1;
-    send({ id: 2, type: 'query', seq, text, context: { frontmost_app: 'socket-client' }, debounceMs: config.jev.debounceMs });
+    send({ id: 2, type: 'query', seq, text, context: { frontmost_app: 'socket-client' } });
   }
 });
 

@@ -151,7 +151,7 @@ export function sortByFuzzy(rows, query) {
 /**
  * Whether every meaningful word the user typed appears in this row.
  *
- * This is what the green Enter means now that Jev is not asked: not a model's
+ * This is what the green Enter means: not a model's
  * opinion that the intent is settled, but the plain fact that the query's words
  * are all present in the row's name, keywords or subtitle. A prefix counts, so
  * "dar" greens the row once "dark" is its best match — but a query shorter than

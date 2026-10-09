@@ -1,5 +1,5 @@
 /**
- * Jev Launcher — GNOME Shell extension entry point.
+ * NixCast — GNOME Shell extension entry point.
  *
  * Responsibilities, deliberately small:
  *   - own the keybinding through the shell's keybinding manager, so the
@@ -8,9 +8,9 @@
  *   - hand rows from the brain to the panel, dropping stale answers
  *   - send the Enter press and report what happened
  *
- * Everything else — indexing, fuzzy matching, arithmetic, time windows, the
- * Jev request, ranking and execution — lives in the brain process, out of the
- * shell's address space. A bug there cannot take down the desktop.
+ * Everything else — indexing, fuzzy matching, arithmetic, time windows, ranking
+ * and execution — lives in the brain process, out of the shell's address space.
+ * A bug there cannot take down the desktop.
  */
 
 import GLib from 'gi://GLib';
@@ -21,20 +21,16 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { BrainClient } from './lib/brain-client.js';
-import { JevPanel } from './lib/panel.js';
+import { NixCastPanel } from './lib/panel.js';
 
 const KEYBINDING_NAME = 'toggle-launcher';
 
-export default class JevLauncherExtension extends Extension {
+export default class NixCastExtension extends Extension {
   enable() {
     this._settings = this.getSettings();
     this._seq = 0;
-    this._index = null;
-    this._jev = null;
-    this._stats = null;
 
-    this._panel = new JevPanel({
-      settings: this._settings,
+    this._panel = new NixCastPanel({
       onQuery: (text) => this.#onQuery(text),
       onExecute: (row) => this.#onExecute(row),
       onClose: () => {},
@@ -53,8 +49,9 @@ export default class JevLauncherExtension extends Extension {
 
     // Printed once per enable(), so the journal always says which shortcut is
     // live — and during development it answers whether re-enabling actually
-    // re-read the files, which on GNOME 49 it does not (see README §10).
-    log(`jev-launcher enabled: shortcut ${this._settings.get_strv(KEYBINDING_NAME).join(', ') || '(none)'}`);
+    // re-read the files, which on GNOME 49 it does not (see
+    // docs/troubleshooting.md).
+    log(`nixcast enabled: shortcut ${this._settings.get_strv(KEYBINDING_NAME).join(', ') || '(none)'}`);
   }
 
   disable() {
@@ -82,15 +79,19 @@ export default class JevLauncherExtension extends Extension {
         // bogus settings read in panel.js made Alt+Space look dead. Catch it,
         // log it with context, and leave the shell usable.
         try {
+          const wasOpen = Boolean(this._panel?.isOpen);
           this._panel?.toggle();
+          // Fresh counts for the footer: the index is built in the background,
+          // so the first open after a login has to ask again.
+          if (!wasOpen) this._brain?.requestStats();
         } catch (err) {
-          logError(err, 'jev-launcher: toggling the panel failed');
+          logError(err, 'nixcast: toggling the panel failed');
         }
       }
     );
   }
 
-  /** Minimal context, matching the macOS version's state fields. */
+  /** The little the brain needs to know about the moment the panel opened. */
   #context() {
     let frontmostApp = null;
     try {
@@ -110,28 +111,16 @@ export default class JevLauncherExtension extends Extension {
       recentApps = [];
     }
 
-    const now = new Date();
-    const hours = now.getHours();
-    const timeOfDay = hours < 5 ? 'late night' : hours < 12 ? 'morning' : hours < 17 ? 'afternoon' : hours < 21 ? 'evening' : 'night';
-
-    return {
-      frontmost_app: frontmostApp,
-      recent_apps: recentApps,
-      // Reading clipboard contents needs a helper process; the kind of the
-      // current selection is enough for Jev and is what the original sends.
-      clipboard_kind: 'unknown',
-      time_of_day: timeOfDay,
-      weekday: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()],
-    };
+    return { frontmost_app: frontmostApp, recent_apps: recentApps };
   }
 
   #onQuery(text) {
     if (!this._brain) return;
-    // Every keystroke goes out. The brain answers the fuzzy phase
-    // immediately and debounces its own Jev call, so the list never waits
-    // on the network and stale answers are discarded by sequence number.
+    // Every keystroke goes out. The brain answers from its own index on the
+    // spot, so the list never waits — and `seq` lets the panel drop an answer
+    // that a newer keystroke has already superseded.
     this._seq += 1;
-    const sent = this._brain.query(text, this.#context(), this._seq, this._settings.get_int('debounce-ms'));
+    const sent = this._brain.query(text, this.#context(), this._seq);
     if (!sent) this._panel.setBrainState(this._brain.state);
   }
 
@@ -146,9 +135,12 @@ export default class JevLauncherExtension extends Extension {
 
     switch (message.type) {
       case 'hello':
-        this._index = message.index;
-        this._jev = message.jev;
-        this._panel.setJevConfigured(message.jev);
+        this._panel.setApp(message.app);
+        this._panel.setIndex(message.index);
+        break;
+
+      case 'stats':
+        this._panel.setIndex(message.index);
         break;
 
       case 'results': {
@@ -156,20 +148,10 @@ export default class JevLauncherExtension extends Extension {
         if (typeof message.seq === 'number' && message.seq < this._seq) return;
         this._panel.setRows(message.rows ?? [], {
           phase: message.phase,
-          stats: message.stats ?? this._stats,
-          usage: message.usage ?? this._usage,
           set: message.set ?? null,
-          targetId: message.targetId ?? null,
-          action: message.action ?? null,
         });
-        if (message.stats) this._stats = message.stats;
-        if (message.usage) this._usage = message.usage;
         break;
       }
-
-      case 'jev_error':
-        this._panel.setWarning(`Jev error: ${message.error}`);
-        break;
 
       case 'executed':
         if (!message.ok) {
@@ -191,10 +173,6 @@ export default class JevLauncherExtension extends Extension {
         }
 
         this._panel.close();
-        break;
-
-      case 'index':
-        this._index = message.index;
         break;
 
       case 'error':

@@ -23,7 +23,7 @@ const FIXTURE = {
     },
     other: {
       children: [
-        { date_added: '13412931094154987', name: 'Jev', type: 'folder', children: [
+        { date_added: '13412931094154987', name: 'Reference', type: 'folder', children: [
           { date_added: '13412931094154988', name: 'TypeSafe', type: 'url', url: 'https://docs.typesafe.ai/' },
         ] },
       ],
@@ -46,7 +46,7 @@ describe('chromium bookmark tree', () => {
     expect(byTitle.TimeArena.folder).toBe('ChaiCode');
     // Chromium's non-bar roots keep their own name so folders stay unambiguous;
     // only the bar — literally named "Bookmarks" — is dropped.
-    expect(byTitle.TypeSafe.folder).toBe('Other bookmarks / Jev');
+    expect(byTitle.TypeSafe.folder).toBe('Other bookmarks / Reference');
     // A bookmark sitting directly in the bar has no folder of its own.
     expect(byTitle['Loose link'].folder).toBe('Bookmarks bar');
   });

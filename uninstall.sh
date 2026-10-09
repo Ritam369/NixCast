@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 #
-# Jev Launcher uninstaller.
+# NixCast uninstaller.
 #
 #   ./uninstall.sh                 remove the extension and stop the service
-#   ./uninstall.sh --keep-config   leave ~/.config/jev-launcher alone
+#   ./uninstall.sh --keep-config   leave ~/.config/nixcast alone
 #   ./uninstall.sh --restore-hotkey
 #                                  give Alt+Space back to GNOME's window menu
 
 set -euo pipefail
 
-UUID="jev-launcher@ritam.local"
-EXT_DEST="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$UUID"
+UUID="nixcast@ritam.local"
+LEGACY_UUID="jev-launcher@ritam.local"
+EXT_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions"
+EXT_DEST="$EXT_ROOT/$UUID"
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-UNIT_PATH="$UNIT_DIR/jev-brain.service"
-CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/jev-launcher"
-SOCKET="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/jev-launcher/brain.sock"
+UNIT_PATH="$UNIT_DIR/nixcast-brain.service"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nixcast"
+SOCKET="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/nixcast/brain.sock"
 
 KEEP_CONFIG=0
 RESTORE_HOTKEY=0
@@ -31,7 +33,7 @@ done
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
 say 'Stopping the brain service'
-systemctl --user disable --now jev-brain.service 2>/dev/null || true
+systemctl --user disable --now nixcast-brain.service 2>/dev/null || true
 rm -f "$UNIT_PATH"
 systemctl --user daemon-reload || true
 rm -f "$SOCKET"
@@ -49,8 +51,15 @@ else
   echo '  nothing installed'
 fi
 
+# An install from before the rename, in case this is run on an old machine.
+if [ -e "$EXT_ROOT/$LEGACY_UUID" ] || [ -L "$EXT_ROOT/$LEGACY_UUID" ]; then
+  gnome-extensions disable "$LEGACY_UUID" 2>/dev/null || true
+  rm -rf "$EXT_ROOT/$LEGACY_UUID"
+  echo "  removed the older $LEGACY_UUID install"
+fi
+
 if [ "$KEEP_CONFIG" = 0 ]; then
-  say 'Removing config (which holds your API key)'
+  say 'Removing config'
   rm -rf "$CONFIG_DIR"
   echo "  removed $CONFIG_DIR"
 else

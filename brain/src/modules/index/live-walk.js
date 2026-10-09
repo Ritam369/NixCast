@@ -2,7 +2,7 @@
  * Live name search — walks configured roots on demand instead of indexing them.
  *
  * Why this exists: the file index covers a fixed set of folders, which is what
- * keeps a keystroke instant and keeps Jev's candidate list small. The cost is
+ * keeps a keystroke instant and keeps the candidate list small. The cost is
  * that anything outside those folders is invisible — a removable drive, a photo
  * library, a project tree. Indexing everything is not the answer either: the
  * walk cost would move into the refresh, and a large tree would swamp the
@@ -28,7 +28,7 @@ const DEFAULTS = {
 
 /**
  * "grep the tree by name": a case-insensitive substring test on the file name.
- * Deliberately literal — the fuzzy scorer and Jev handle ranking later, and a
+ * Deliberately literal — the fuzzy scorer handles ranking later, and a
  * walk that tried to be clever would be slow and unpredictable.
  */
 function nameMatches(fileName, needle) {
@@ -144,8 +144,8 @@ export function walkForQuery({ roots = [], query = '', config = {}, now = Date.n
   }
 
   // Prefer the most literal hit: an exact name, then a prefix, then the shortest
-  // name, then the most recently modified. Ranking quality beyond that is Jev's
-  // job, and this keeps the candidate list genuinely useful when it is truncated.
+  // name, then the most recently modified. Ranking quality beyond that is the
+  // scorer's job; this keeps the list genuinely useful when it is truncated.
   const rank = (row) => {
     const name = row.title.toLowerCase();
     if (name === needle) return 0;

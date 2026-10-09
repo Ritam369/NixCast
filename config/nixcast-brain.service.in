@@ -1,5 +1,5 @@
 [Unit]
-Description=Jev Launcher brain (local index + Jev decisions over a unix socket)
+Description=NixCast brain (local index over a unix socket)
 Documentation=file://__REPO__/README.md
 # The launcher needs a session bus and a running GNOME Shell to be useful, but
 # it does not need the shell to start: it answers as soon as its index is warm.
@@ -13,12 +13,8 @@ ExecStart=__BUN__ run __REPO__/brain/src/index.js
 Restart=on-failure
 RestartSec=2
 # The index is rebuilt in memory on every start; no state is written outside
-# ~/.local/state and $XDG_RUNTIME_DIR.
-Environment=JEV_LOG_LEVEL=info
-# Optional second home for the API key, for people who would rather not put a
-# secret in config.json. Create it as:  chmod 600 ~/.config/jev-launcher/env
-# with a line like:  AI_GATEWAY_API_KEY=...      (leading "-" = ignore if absent)
-EnvironmentFile=-%h/.config/jev-launcher/env
+# ~/.local/state and $XDG_RUNTIME_DIR. Nothing here talks to the network.
+Environment=NIXCAST_LOG_LEVEL=info
 # Coredumps from a JS runtime are never useful here.
 LimitCORE=0
 
